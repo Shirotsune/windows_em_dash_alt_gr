@@ -43,6 +43,33 @@ void SendEmDash() {
     }
 }
 
+
+void OpenPowerShell() {
+    // Parameters for ShellExecuteW
+    LPCWSTR operation = L"open";              // Operation to perform
+    LPCWSTR file = L"powershell.exe";         // Application to execute
+    LPCWSTR parameters = L"";                 // Command-line parameters (if any)
+    LPCWSTR directory = NULL;                  // Default directory
+    int showCmd = SW_SHOWNORMAL;              // Show the window normally
+
+    // Execute PowerShell using ShellExecuteW
+    HINSTANCE result = ShellExecuteW(
+        NULL,       // Handle to parent window
+        operation,  // Operation to perform
+        file,       // Application to execute
+        parameters, // Additional parameters
+        directory,  // Default directory
+        showCmd     // Display options
+    );
+
+    // Check if the execution was successful
+    if ((INT_PTR)result <= 32)
+    {
+        // Handle errors here using MessageBoxW
+        MessageBoxW(NULL, L"Failed to launch PowerShell.", L"Error", MB_ICONERROR);
+    }
+}
+
 // Low-level keyboard hook callback
 LRESULT CALLBACK LowLevelKeyboardProc(int nCode, WPARAM wParam, LPARAM lParam) {
     if (nCode == HC_ACTION) {
@@ -64,6 +91,33 @@ LRESULT CALLBACK LowLevelKeyboardProc(int nCode, WPARAM wParam, LPARAM lParam) {
                     return 1; // Non-zero to prevent further processing
                 }
             }
+
+            // Check if 'T' is pressed while Ctrl and Alt are held (Alt+GR)
+            if (pKB->vkCode == 'T') {
+                bool isCtrlPressed = (GetAsyncKeyState(VK_CONTROL) & 0x8000) != 0;
+                bool isAltPressed = (GetAsyncKeyState(VK_MENU) & 0x8000) != 0;
+                if (isCtrlPressed && isAltPressed) {
+                    OpenPowerShell();
+
+                    // Suppress the original keypress
+                    return 1; // Non-zero to prevent further processing
+                }
+            }
+
+            // Gracefully exit with Q (Alt+GR / Crl + Alt)
+            if (pKB->vkCode == 'Q') {
+                bool isCtrlPressed = (GetAsyncKeyState(VK_CONTROL) & 0x8000) != 0;
+                bool isAltPressed = (GetAsyncKeyState(VK_MENU) & 0x8000) != 0;
+                if (isCtrlPressed && isAltPressed) {
+                    PostQuitMessage(0);
+
+                    // Suppress the original keypress
+                    return 1; // Non-zero to prevent further processing
+                }
+            }
+
+
+
             break;
 
         case WM_KEYUP:
@@ -75,6 +129,7 @@ LRESULT CALLBACK LowLevelKeyboardProc(int nCode, WPARAM wParam, LPARAM lParam) {
     // Call the next hook in the chain
     return CallNextHookEx(NULL, nCode, wParam, lParam);
 }
+
 
 int CALLBACK WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR pCmdLine, int nCmdShow) {
     // Set the low-level keyboard hook
